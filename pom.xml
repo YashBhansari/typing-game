@@ -19,7 +19,7 @@
     </properties>
 
     <dependencies>
-        <!-- Servlet and JSP API (provided by Tomcat runtime) -->
+        
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
@@ -33,15 +33,13 @@
             <version>2.3.3</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- JSTL (optional, for better JSP tags) -->
+        
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>jstl</artifactId>
             <version>1.2</version>
         </dependency>
-        
-	    <!-- PostgreSQL JDBC Driver -->
+        	    
 	    <dependency>
 	        <groupId>org.postgresql</groupId>
 	        <artifactId>postgresql</artifactId>
@@ -61,13 +59,12 @@
 		    <version>20240303</version>
 		</dependency>
 
-
 	</dependencies>
 
     <build>
         <finalName>typing-game</finalName>
         <plugins>
-            <!-- Compiler plugin -->
+            
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -77,8 +74,7 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-
-            <!-- WAR packaging plugin -->
+            
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
@@ -89,8 +85,4 @@
             </plugin>
         </plugins>
     </build>
-    
-    
-    
-
 </project>

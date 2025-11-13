@@ -16,37 +16,36 @@ public class AuthServlet extends HttpServlet
     {
         String action = request.getParameter("action");
 
-		if ("register".equals(action)) {
-			String username = request.getParameter("username");
-			String email = request.getParameter("email");
-			String password = request.getParameter("password");
+        if ("register".equals(action))
+        {
+            String username = request.getParameter("username");
+            String email = request.getParameter("email");
+            String password = request.getParameter("password");
 
-			try {
-				boolean success = UserDAO.register_user(username, email, password);
-				if (success) {
-					response.sendRedirect("login.jsp");
-				} else {
-					System.out.println("❌ Registration failed: UserDAO returned false");
-					response.sendRedirect("register.jsp?error=1");
-				}
-			} catch (Exception e) {
-				e.printStackTrace(); // Prints the SQL cause in Eclipse console
-				response.sendRedirect("register.jsp?error=db");
-			}
-		}
+            boolean success = UserDAO.register_user(username, email, password);
+            if (success)
+            {
+                response.sendRedirect("login.jsp");
+            }
+            else
+            {
+                response.sendRedirect("register.jsp?error=1");
+            }
+        }
         else if ("login".equals(action))
         {
             String email = request.getParameter("email");
-            String password = request.getParameter("password");
-            
+            String password = request.getParameter("password");            
 
             boolean valid = UserDAO.validate_user(email, password);
             if (valid)
             {
-				HttpSession session = request.getSession();
-				session.setAttribute("email", email);
+                HttpSession session = request.getSession();
+                session.setAttribute("email", email);
                 String username = UserDAO.get_username_by_email(email);
+                int user_id = UserDAO.get_user_id_by_email(email);
                 session.setAttribute("username", username);
+                session.setAttribute("user_id", user_id);
                 response.sendRedirect("home.jsp");
             }
             else

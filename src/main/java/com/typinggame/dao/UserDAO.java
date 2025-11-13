@@ -33,7 +33,7 @@ public class UserDAO {
             System.out.println("✅ User registered: " + email);
             return true;
         } catch (SQLException e) {
-            if ("23505".equals(e.getSQLState())) { // PostgreSQL unique_violation
+            if ("23505".equals(e.getSQLState())) {
                 System.out.println("❌ Email or username already registered.");
             } else {
                 System.out.println("❌ SQL Error during registration:");

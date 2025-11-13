@@ -1,0 +1,133 @@
+@charset "ISO-8859-1";
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000;
+    color: #f0f0f0;
+    line-height: 1.6;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    padding: 40px 30px;
+    width: 200%;
+    max-width: 500px;
+    flex-direction: column;
+    display: flex;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
+}
+
+
+h2 {
+    color: #0af;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    color: #ccc;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #222;
+    background: #111;
+    color: #f0f0f0;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.25s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border-color: #0af;
+    box-shadow: 0 0 8px #0af;
+}
+
+button {
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    color: #000;
+    font-weight: 500;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+p {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+p a {
+    color: #0af;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.25s ease;
+}
+
+p a:hover {
+    color: #05a;
+    text-decoration: underline;
+}
+
+.error-msg {
+    color: #fa4444;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.success-msg {
+    color: #22c55e;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 500px) {
+    .container {
+        padding: 30px 20px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    button {
+        font-size: 14px;
+    }
+}

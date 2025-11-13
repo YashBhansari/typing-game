@@ -1,365 +1,301 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-	<!DOCTYPE html>
-	<html>
-
-	<head>
-		<title>Typing Game</title>
-		<style>
-			body {
-				font-family: Arial, sans-serif;
-				margin: 40px;
-			}
-
-			textarea {
-				width: 100%;
-				height: 120px;
-				font-size: 16px;
-			}
-
-			#quote {
-				font-size: 18px;
-				margin-bottom: 10px;
-			}
-
-			#movie {
-				color: gray;
-				font-style: italic;
-				margin-bottom: 15px;
-			}
-
-			#result {
-				margin-top: 15px;
-				font-weight: bold;
-			}
-
-			#timer {
-				font-size: 16px;
-				margin-top: 8px;
-			}
-
-			#leaderboard {
-				margin-top: 20px;
-				border-top: 1px solid #ddd;
-				padding-top: 10px;
-			}
-
-			#leaderboard table {
-				width: 100%;
-				border-collapse: collapse;
-			}
-
-			#leaderboard th,
-			#leaderboard td {
-				text-align: left;
-				padding: 6px;
-				border-bottom: 1px solid #eee;
-			}
-		</style>
-		<script>
-			console.log("✅ JS is running");
-
-			let quote_text = "";
-			let start_time = null;
-			let timer_running = false;
-			let typed_chars = 0;
-			let correct_chars = 0;
-			let timer_interval;
-			let visible_timer_interval;
-			let score_submitted = false;
-
-			async function fetch_quote() {
-				try {
-					const res = await fetch("QuoteServlet");
-					const data = await res.json();
-
-					if (data.error) {
-						document.getElementById("quote").innerText = "Error fetching quote.";
-						document.getElementById("movie").innerText = "";
-						return;
-					}
-
-					document.getElementById("quote").innerText = data.quote;
-					document.getElementById("movie").innerText = "- " + data.movie + "  (" + data.year + ")";
-					// keep the quote exactly as returned from server (don't trim) so matching is consistent
-					quote_text = data.quote;
-
-					start_typing();
-				}
-				catch (e) {
-					console.error(e);
-					document.getElementById("quote").innerText = "Server error.";
-				}
-			}
-
-			function start_typing() {
-				const input = document.getElementById("user_input");
-				const result = document.getElementById("result");
-				input.value = "";
-				result.innerText = "";
-				start_time = null;
-				timer_running = false;
-				typed_chars = 0;
-				correct_chars = 0;
-				input.disabled = false;
-				input.focus();
-				document.getElementById("timer").innerText = "Time: 0.0s";
-				score_submitted = false;
-			}
-
-			function on_type() {
-				let input = document.getElementById("user_input").value;
-				let result = document.getElementById("result");
-
-				if (!timer_running && input.length > 0) {
-					start_time = new Date();
-					timer_running = true;
-					timer_interval = setInterval(update_stats, 100);
-				}
-
-				update_stats();
-
-				if (input === quote_text) {
-					clearInterval(timer_interval);
-					document.getElementById("user_input").disabled = true;
-					// finalize and submit
-					submit_score();
-				}
-			}
-
-			function update_stats() {
-				let input = document.getElementById("user_input").value;
-				let result = document.getElementById("result");
-
-				let typed_chars = input.length;
-				let correct_chars = 0;
-
-				for (let i = 0; i < input.length; i++) {
-					if (input[i] === quote_text[i]) {
-						correct_chars++;
-					}
-				}
-
-				// if timer hasn't started yet, show zeroed stats
-				if (!start_time) {
-					result.innerHTML =
-						"WPM: 0<br>" +
-						"Accuracy: 0%<br>" +
-						"Time: 0s";
-					return;
-				}
-
-				let end_time = new Date();
-				let time_taken = (end_time - start_time) / 1000;
-
-				if (typed_chars === 0 || time_taken === 0 || isNaN(time_taken)) {
-					result.innerHTML =
-						"WPM: 0<br>" +
-						"Accuracy: 0%<br>" +
-						"Time: 0s";
-					return;
-				}
-
-				let minutes = time_taken / 60;
-				let wpm = ((correct_chars / 5) / minutes).toFixed(2);
-				let accuracy = ((correct_chars / typed_chars) * 100).toFixed(2);
-				document.getElementById("timer").innerText = "Time: " + time_taken.toFixed(1) + "s";
-				result.innerHTML =
-					"WPM: " + wpm + "<br>" +
-					"Accuracy: " + accuracy + "%<br>" +
-					"Time: " + time_taken.toFixed(1) + "s";
-			}
-
-			function start_visible_timer() {
-				if (visible_timer_interval) clearInterval(visible_timer_interval);
-				visible_timer_interval = setInterval(() => {
-					if (!start_time) return;
-					let t = (new Date() - start_time) / 1000;
-					document.getElementById("timer").innerText = "Time: " + t.toFixed(1) + "s";
-				}, 100);
-			}
-
-			async function submit_score() {
-				if (score_submitted) return; // already submitted
-				// compute final stats one last time
-				let input = document.getElementById("user_input").value;
-				let typed_chars = input.length;
-				let correct_chars = 0;
-				for (let i = 0; i < input.length; i++) {
-					if (input[i] === quote_text[i]) correct_chars++;
-				}
-
-				if (!start_time) return; // nothing to submit
-				let time_taken = (new Date() - start_time) / 1000;
-				let minutes = time_taken / 60;
-				let wpm = minutes > 0 ? ((correct_chars / 5) / minutes) : 0;
-				let accuracy = typed_chars > 0 ? ((correct_chars / typed_chars) * 100) : 0;
-
-				try {
-					const res = await fetch('<%= request.getContextPath() %>/score', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ wpm: Number(wpm.toFixed(2)), accuracy: Number(accuracy.toFixed(2)), timeTaken: Number(time_taken.toFixed(2)) })
-					});
-					const data = await res.json();
-					if (data.status === 'ok') {
-						score_submitted = true;
-						// refresh leaderboard
-						fetch_leaderboard();
-					} else if (data.status === 'ignored') {
-						score_submitted = true; // treat ignored as submitted to avoid retry loops
-					}
-				} catch (e) {
-					console.error('Failed to submit score', e);
-				}
-			}
-async function fetch_leaderboard() {
-    console.log("🔄 fetch_leaderboard() started");
-
-    try {
-        const res = await fetch('score');
-        console.log("✅ fetch complete, status:", res.status);
-        const text = await res.text();
-        console.log("📜 raw response text:", text);
-
-        const tbody = document.getElementById('leaderboard-body');
-        tbody.innerHTML = '<tr><td colspan="5">Parsing response...</td></tr>';
-
-        let arr;
-        try {
-            arr = JSON.parse(text);
-            console.log("✅ parsed JSON:", arr);
-        } catch (e) {
-            console.error("❌ JSON parse failed:", e);
-            tbody.innerHTML = '<tr><td colspan="5">Invalid leaderboard JSON</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = ''; // clear the "Loading..." message
-
-        if (!Array.isArray(arr) || arr.length === 0) {
-            console.warn("⚠️ Empty leaderboard array");
-            tbody.innerHTML = '<tr><td colspan="5">No scores yet</td></tr>';
-            return;
-        }
-
-        console.log("✅ rendering leaderboard with", arr.length, "rows");
-
-        arr.forEach((r, idx) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>\${idx + 1}</td>
-                <td>\${r.username || r.USERNAME || "(anonymous)"}</td>
-                <td>\${r.wpm || r.WPM || 0}</td>
-                <td>\${r.accuracy || r.ACCURACY || 0}%</td>
-                <td>\${r.timeTaken || r.TIMETAKEN || 0}s</td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-    } catch (e) {
-        console.error("❌ fetch_leaderboard() failed:", e);
+<%@ page import="java.sql.*, java.util.*, com.typinggame.util.DBConnection" %>
+<%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page session="true" %>
+<%
+    if (session.getAttribute("username") == null)
+    {
+        response.sendRedirect("login.jsp");
+        return;
     }
+    String username = session.getAttribute("username").toString();
+%>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Typing Game</title>
+    <link rel="stylesheet" type="text/css" href="game.css">
+</head>
+<body onload="fetch_quote()">
+
+    <div class="navbar">
+        <div class="navbar-left">
+            <h2>Welcome, <%= username %></h2>
+        </div>
+        <div>Total Runs: <strong id="totalRuns">--</strong></div>
+        <div>Avg WPM: <strong id="avgWpm">--</strong></div>
+        <div>Top WPM: <strong id="topWpm">--</strong></div>
+        <div>Avg Accuracy: <strong id="avgAcc">--</strong>%</div>
+        <div class="navbar-right">
+        	<a href="home.jsp">Leaderboard</a>
+            <a href="logout.jsp">Logout</a>
+        </div>
+    </div>
+	<br>
+    <div id="quote_display"></div>
+    <div id="movie"></div>
+    <br>
+
+    <textarea id="user_input" oninput="on_type()" placeholder="Start typing here..."></textarea>
+    <div id="result" style="margin-top:10px;"></div>
+    
+    <div>
+		<label for="quote_type" style="color:#fff;">Text Length:</label>
+		<select id="quote_type">
+			<option value="short">Short</option>
+			<option value="medium" selected>Medium</option>
+			<option value="long">Long</option>
+		</select>
+		<a href="#" onclick="fetch_quote(); return false;">New Quote</a>
+    </div>
+<script>
+    let quote_text = "";
+    let quote_id = null;
+    let startTime = null;
+    let timerInterval = null;
+
+    let typed = 0;
+    let correct = 0;
+    let errors = 0;
+    let finished = false;
+
+    
+    document.addEventListener("DOMContentLoaded", loadUserStats);
+
+    
+    
+    
+    async function loadUserStats() {
+        try {
+            const res = await fetch("<%= request.getContextPath() %>/UserStatsServlet");
+            const data = await res.json();
+            if (!data || data.error) return;
+
+            document.getElementById("totalRuns").textContent = data.totalRuns ?? 0;
+            document.getElementById("avgWpm").textContent = (data.avgWpm ?? 0).toFixed(2);
+            document.getElementById("topWpm").textContent = (data.topWpm ?? 0).toFixed(2);
+            document.getElementById("avgAcc").textContent = (data.avgAcc ?? 0).toFixed(2);
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    
+    
+    
+    async function fetch_quote() {
+        const type = document.getElementById("quote_type").value;
+
+        try {
+            const res = await fetch("QuoteServlet?type=" + encodeURIComponent(type));
+            const data = await res.json();
+
+            if (data.error) {
+                document.getElementById("quote_display").innerText = "Error: " + data.error;
+                return;
+            }
+
+            
+            finished = false;
+            clearInterval(timerInterval);
+
+            quote_text = data.quote.trim();
+            quote_id = data.id;
+
+            render_quote(quote_text);
+
+            document.getElementById("movie").innerText =
+                "- " + data.movie + " (" + data.year + ")";
+
+            reset_typing();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    
+    
+    
+    function render_quote(text) {
+        const box = document.getElementById("quote_display");
+        box.innerHTML = "";
+        for (let c of text) {
+            const span = document.createElement("span");
+            span.textContent = c;
+            box.appendChild(span);
+        }
+    }
+
+    
+    
+    
+    function reset_typing() {
+        let input = document.getElementById("user_input");
+        input.value = "";
+        input.disabled = false;
+        input.focus();
+
+        typed = 0;
+        correct = 0;
+        errors = 0;
+        startTime = null;
+
+        document.getElementById("result").innerHTML = "WPM: 0 | Accuracy: 0% | Time: 0s";
+
+        
+        clearInterval(timerInterval);
+        timerInterval = setInterval(updateLiveStats, 100);
+    }
+
+    
+    
+    
+    function updateLiveStats() {
+        if (!startTime) return;
+        if (finished) return;
+
+        const now = new Date();
+        const seconds = (now - startTime) / 1000;
+        const minutes = seconds / 60;
+
+        const wpm = minutes > 0 ? ((correct / 5) / minutes) : 0;
+        const accuracy = typed > 0 ? ((typed - errors) / typed) * 100 : 100;
+
+        document.getElementById("result").innerHTML =
+            "WPM: " + wpm.toFixed(2) +
+            " | Accuracy: " + accuracy.toFixed(2) + "%" +
+            " | Time: " + seconds.toFixed(1) + "s";
+    }
+
+    
+    
+    
+    async function on_type() {
+        if (finished) return;
+
+        const input = document.getElementById("user_input").value;
+        const spans = document.querySelectorAll("#quote_display span");
+
+        if (!startTime && input.length > 0) {
+            startTime = new Date();
+        }
+
+        typed = input.length;
+        correct = 0;
+        errors = 0;
+
+        for (let i = 0; i < spans.length; i++) {
+            const typedChar = input[i];
+
+            if (typedChar == null) {
+                spans[i].className = "";
+                continue;
+            }
+
+            if (typedChar === quote_text[i]) {
+                spans[i].className = "correct";
+                correct++;
+            } else {
+                spans[i].className = "wrong";
+                errors++;
+            }
+        }
+
+        if (input === quote_text) {
+            finishRun();
+        }
+    }
+
+    
+    
+    
+	async function finishRun() {
+		if (finished) return;
+		finished = true;
+
+		clearInterval(timerInterval);
+
+		const input = document.getElementById("user_input").value;
+		document.getElementById("user_input").disabled = true;
+
+		
+		let correctChars = 0;
+		for (let i = 0; i < input.length; i++) {
+			if (input[i] === quote_text[i]) correctChars++;
+		}
+
+		const typedChars = input.length;
+		const totalChars = quote_text.length;
+
+		const percentTyped = (typedChars / totalChars) * 100;
+
+		
+		
+		
+		if (percentTyped < 60) {
+			document.getElementById("result").innerHTML =
+				"❌ You typed only " + percentTyped.toFixed(1) + "% of the quote.<br>" +
+				"Score NOT saved (minimum 60% required).";
+			return; 
+		}
+
+		
+		const errorsFinal = typedChars - correctChars;
+
+		const now = new Date();
+		const seconds = (now - startTime) / 1000;
+		const minutes = seconds / 60;
+
+		const wpm = minutes > 0 ? (correctChars / 5) / minutes : 0;
+		const accuracy = typedChars > 0 ? (correctChars / typedChars) * 100 : 100;
+
+		document.getElementById("result").innerHTML =
+			"WPM: " + wpm.toFixed(2) +
+			" | Accuracy: " + accuracy.toFixed(2) + "%" +
+			" | Time: " + seconds.toFixed(1) + "s" +
+			"<br><span style='color:#66ff66'>✔ Score saved</span>";
+
+		await save_score(
+			wpm.toFixed(2),
+			accuracy.toFixed(2),
+			seconds.toFixed(1)
+		);
+
+		loadUserStats();
 }
 
 
-			// async function fetch_leaderboard() {
-				// try {
-				// 	const res = await fetch('<%= request.getContextPath() %>/score');
+    
+    
+    
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            finishRun();
+        }
+    });
 
-				// 	const text = await res.text();
-				// 	console.debug('score response text:', text);
+    
+    
+    
+    async function save_score(wpm, acc, time) {
+        try {
+            const params = new URLSearchParams();
+            params.append("quote_id", quote_id);
+            params.append("wpm", wpm);
+            params.append("accuracy", acc);
+            params.append("time_taken", time);
 
-				// 	const tbody = document.getElementById('leaderboard-body');
+            await fetch("ScoreServlet", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: params.toString()
+            });
+        } catch (err) {
+            console.error("Score save error:", err);
+        }
+    }
+</script>
 
-				// 	let arr;
-				// 	try {
-				// 		arr = JSON.parse(text);
-				// 	} catch (e) {
-				// 		console.error('Failed to parse leaderboard JSON', e);
-				// 		tbody.innerHTML = '<tr><td colspan="5">Invalid leaderboard response</td></tr>';
-				// 		return;
-				// 	}
-
-				// 	tbody.innerHTML = '';
-				// 	if (!Array.isArray(arr) || arr.length === 0) {
-				// 		tbody.innerHTML = '<tr><td colspan="5">No scores yet</td></tr>';
-				// 		return;
-				// 	}
-
-				// 	arr.forEach((r, idx) => {
-				// 		const user = r.username || r.USERNAME || "(anonymous)";
-				// 		const wpm = r.wpm || r.WPM || 0;
-				// 		const accuracy = r.accuracy || r.ACCURACY || 0;
-				// 		const timeTaken = r.timeTaken || r.TIMETAKEN || 0;
-
-				// 		const tr = document.createElement('tr');
-				// 		tr.innerHTML = `
-				// 		<td>\${idx + 1}</td>
-				// 		<td>\${user}</td>
-				// 		<td>\${wpm}</td>
-				// 		<td>\${accuracy}%</td>
-				// 		<td>\${timeTaken}s</td>
-				// 	`;
-				// 		tbody.appendChild(tr);
-				// 	});
-
-
-				// } catch (e) {
-				// 	console.error('Failed to fetch leaderboard', e);
-				// }
-				
-			// }
-
-
-			function stop_test() {
-				clearInterval(timer_interval);
-				clearInterval(visible_timer_interval);
-				timer_running = false;
-				document.getElementById('user_input').disabled = true;
-				submit_score();
-			}
-
-		</script>
-	</head>
-
-	<body onload="fetch_quote()">
-		<h2>Typing Game</h2>
-		<div id="quote"></div>
-		<div id="movie"></div>
-
-		<textarea id="user_input" oninput="on_type()"></textarea><br>
-		<button onclick="fetch_quote()">Start New</button>
-		<button onclick="stop_test()">Stop</button>
-		<button type="button" onclick="location.href='<%= request.getContextPath() %>/logout'">Logout</button>
-		<div id="timer">Time: 0.0s</div>
-
-		<div id="result"></div>
-
-		<div id="leaderboard">
-			<h3>Leaderboard</h3>
-			<table>
-				<thead>
-					<tr>
-						<th>#</th>
-						<th>User</th>
-						<th>WPM</th>
-						<th>Accuracy</th>
-						<th>Time</th>
-					</tr>
-				</thead>
-				<tbody id="leaderboard-body">
-					<tr>
-						<td colspan="5">Loading...</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-
-	<script>
-		console.log("👀 Running fetch_leaderboard() on load");
-		fetch_leaderboard();
-	</script>
-
-	</body>
-
-	</html>
+</body>
+</html>
