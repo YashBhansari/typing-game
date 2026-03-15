@@ -1,0 +1,23 @@
+# Compiled output
+/bin/
+/target/
+*.class
+ 
+# Maven
+*.war
+*.jar
+ 
+# DB credentials — never commit
+src/main/resources/db.properties
+ 
+# Eclipse IDE
+.classpath
+.project
+.settings/
+ 
+# Artifact from bad zip extraction
+src/main/java/com/typinggame/{dao,servlet,util}/
+ 
+# OS
+.DS_Store
+Thumbs.db
